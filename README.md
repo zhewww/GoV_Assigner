@@ -8,5 +8,7 @@ Installation:
 - Add performers, then send them to Extras to put them in the pool for random selection. Drag and drop to manually assign roles.
 - For an example save, you can import `RoleAssigner_save1769801809728.json`
 
-<img width="2538" height="1259" alt="image" src="https://github.com/user-attachments/assets/9ad3d69b-ad4f-4f9a-9147-b9c0bdb4d9a2" />
+<img width="2536" height="1262" alt="image" src="https://github.com/user-attachments/assets/ff1ac146-5e44-4ebd-9c61-e7d221054a4a" />
+
+
 
