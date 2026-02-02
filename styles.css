@@ -210,9 +210,9 @@ main {
 
 /* Character list specifics */
 .character-list {
-  display: flex;
-  flex-direction: column;
-  gap: 4px
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px; /* optional */
 }
 
 .character-card {
