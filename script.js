@@ -6,8 +6,9 @@
     let performerIdCounter = 1;
     let projectIdCounter = 1;
     let characterIdCounter = 1;
-    // set when loading an existing file to the Date when it was originally saved
-    let seshDate = null
+    // set when loading an existing file 
+    let loadedFileName = null
+    let loadedFileSaveDate = null
 
     const performers = {}; // id -> {id,name,gender,performed,everAssignedThisSession}
     const projects = []; // {id,name,characters:[{id,name,gender,assigned:null}]}
@@ -611,6 +612,18 @@
         renderAll();
     });
 
+    // Save file as modal logic
+    $('#save-as-cancel').addEventListener('click', () => closeModal('#save-as-modal'));
+    $('#save-as-submit').addEventListener('click', () => {
+        const fName = $('#save-as-input').value.trim();
+        const err = $('#save-as-error');
+        err.textContent = '';
+        if (fName.length < 1) { err.textContent = 'Please enter a file name.'; return; }
+        exportData(fName.replace('.json', ''));
+        closeModal('#save-as-modal');
+        renderAll();
+    });
+
     // Projects
     $('#delete-project-btn').addEventListener('click', () => {
         const proj = projects.find(p => p.id === currentProjectId);
@@ -639,7 +652,14 @@
 
     // Export / Import
     $('#export-btn').addEventListener('click', () => {
-        exportData();
+        if (!loadedFileName) {
+            $('#save-as-input').value = '';
+            $('#save-as-error').textContent = '';
+            openModal('#save-as-modal');
+            $('#save-as-input').focus();
+        } else {
+            exportData(loadedFileName);
+        }
     });
     // Import button triggers hidden file input
     $('#import-btn').addEventListener('click', () => {
@@ -654,10 +674,14 @@
         const reader = new FileReader();
         reader.onload = function (ev) {
             try {
+                console.log("Loading file:", file.name);
                 const data = JSON.parse(ev.target.result);
+                console.log("Parsed data:", data);
                 loadData(data);
+                console.log("Data loaded successfully.");
                 e.target.value = ''; // reset input
-                seshDate = new Date(parseInt(file.name.replace('RoleAssigner_save', '').replace('.json', '')))
+                loadedFileName = file.name.replace('.json', '');
+                loadedFileSaveDate = new Date(parseInt(data.saveDate))
             } catch (err) {
                 alert('Invalid JSON file.');
             }
@@ -767,14 +791,14 @@
     }
 
     // --- Export / Import implementation ---
-    function exportData() {
+    function exportData(fileName) {
         // For each performer, increment performed if they were assigned at least once this session, else decrement.
         // Then export performers and projects (characters only — no assignments).
         const outPerformers = [];
         for (const id in performers) {
             const p = performers[id];
             let newPerformed = p.performed
-            if (!seshDate || !isToday(seshDate)) {
+            if (!loadedFileSaveDate || !isToday(loadedFileSaveDate)) {
                 newPerformed = p.everAssignedThisSession ? clamp(p.performed + 1, 0, 9) : clamp(p.performed - 1, 0, 9);
             }
             p.performed = newPerformed; // update internal state
@@ -784,12 +808,17 @@
             name: proj.name,
             characters: proj.characters.map(c => ({ name: c.name, gender: c.gender }))
         }));
-        const blob = new Blob([JSON.stringify({ performers: outPerformers, projects: outProjects }, null, 2)], { type: 'application/json' });
+
+        const saveDate = Date.now();
+        if(!loadedFileName) {
+            loadedFileName = fileName;
+            loadedFileSaveDate = saveDate;
+        }
+        const blob = new Blob([JSON.stringify({ saveDate: saveDate, performers: outPerformers, projects: outProjects }, null, 2)], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        const date = new Date();
-        a.download = 'RoleAssigner_save' + Date.now() + '.json';
+        a.download = fileName + '.json';
         document.body.appendChild(a);
         a.click();
         a.remove();
