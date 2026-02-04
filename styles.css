@@ -139,9 +139,12 @@ main {
   flex: 1;
   display: flex;
   align-items: center;
-  gap: 8px
+  gap: 8px;
 }
 
+.character-card .item-left {
+    padding-left: 25px;
+}
 .item-name {
   font-weight: 600;
   color: var(--text)
@@ -210,22 +213,23 @@ main {
 
 /* Character list specifics */
 .character-list {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 8px; /* optional */
+  column-count: 3;
+  column-gap: 8px;
 }
 
 .character-card {
   flex-direction: column;
   align-items: stretch;
-  padding: 10px
+  padding: 10px;
+  break-inside: avoid; /* Prevent card from breaking across columns */
 }
 
 .character-top-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px
+  gap: 8px;
+  padding-left: 6px;
 }
 
 .char-controls {
@@ -392,9 +396,9 @@ header h1 {
 .performer-item,
 .extra-item,
 .character-card {
-  padding: 3px;
-  border-radius: 6px;
-  gap: 6px;
+  padding: 0;
+  padding-bottom: 6px;
+  /* padding-left: 6px; */
   margin-bottom:1px;
 }
 
@@ -416,7 +420,8 @@ header h1 {
 /* Character zones */
 .character-dropzone {
   min-height: 40px;
-  padding: 6px;
+  padding: 0px;
+  padding-bottom: 6px;
 }
 
 /* Modals */
