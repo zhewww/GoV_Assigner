@@ -12,3 +12,4 @@ Installation:
 
 Notes:
 - The random selection algorithm prioritizes people who were not assigned to main cast members. If you want to manually reset the penalty that a frequent reader receives, you can edit the .json file and set the "performed" value back to 0. This value is incremented by 1 if a performer was assigned to a character during the session (Max 9), and is decremented if they were inactive or only played extras. This value is recalculated when the file is saved, but only once per day. It references the timestamp in the filename of the last loaded save for this (and will alwways trigger on the first save if no save has been previously loaded.)
+- The character images function expects to find the image in an `images` folder at the same level as the `index.html`. Load the ExampleSave for an example on how to do this, and click on any "No Image Found" box to show information on where you need to put that image.

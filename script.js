@@ -115,8 +115,8 @@
 
             item.innerHTML = `
         <div class="item-left">
-          <div class="item-name">${escapeHtml(p.name)}</div>
-          <button class="gender-btn ${p.gender === 'M' ? 'gender-m' : 'gender-f'}" data-action="toggle-gender">${p.gender}</button>
+            <button class="gender-btn ${p.gender === 'M' ? 'gender-m' : 'gender-f'}" data-action="toggle-gender">${p.gender}</button>
+            <div class="item-name">${escapeHtml(p.name)}</div>
         </div>
         <div>
           <button class="small-btn" data-action="to-extras">⇉</button>
@@ -175,8 +175,8 @@
             item.innerHTML = `
         <div class="item-left">
             <div style="text-align:center;background-color:var(--muted);color:var(--bg);width:26px;border-radius:50%;padding:2px">${orderNum}</div>
-            <div class="item-name">${escapeHtml(p.name)}</div>
             <button class="gender-btn ${p.gender === 'M' ? 'gender-m' : 'gender-f'}" data-action="toggle-gender">${p.gender}</button>
+            <div class="item-name">${escapeHtml(p.name)}</div>
         </div>
         <div>
             <button class="small-btn" data-action="to-performer-list">⇇</button>
@@ -237,8 +237,8 @@
                     <div class="character-main">
                         <div class="character-top-row">
                             <div style="display:flex;align-items:center;gap:8px">
-                                <strong>${escapeHtml(ch.name)}</strong>
                                 <button class="gender-btn ${ch.gender === 'M' ? 'gender-m' : 'gender-f'}" data-action="toggle-g">${ch.gender}</button>
+                                <strong>${escapeHtml(ch.name)}</strong>
                             </div>
                             <div>
                                 <button class="small-btn" data-action="random-char">🎲</button>

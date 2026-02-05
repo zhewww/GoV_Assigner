@@ -89,7 +89,8 @@ header h1 {
 main {
   display: flex;
   gap: var(--gap);
-  padding: 18px
+  padding: 18px;
+  min-height: calc(100vh - 70px);
 }
 
 .column {
@@ -100,11 +101,14 @@ main {
   box-shadow: var(--shadow);
   min-height: 300px;
   border: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
 }
 
 .column h2 {
   margin-top: 0;
-  color: var(--text)
+  color: var(--text);
+  flex-shrink: 0;
 }
 
 /* Dropzones & items */
@@ -114,6 +118,8 @@ main {
   border: 2px dashed transparent;
   border-radius: 8px;
   transition: background .12s, border-color .12s;
+  flex: 1;
+  overflow: auto;
 }
 
 .dropzone.dragover {
