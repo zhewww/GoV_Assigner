@@ -10,11 +10,17 @@
     let loadedFileName = null
     let loadedFileSaveDate = null
 
-    const performers = {}; // id -> {id,name,gender,performed,everAssignedThisSession}
+    const performers = {}; // id -> {id,name,gender,performed,everAssignedThisSession,lastPerformed}
     const projects = []; // {id,name,characters:[{id,name,gender,assigned:null}]}
     let extras = new Set(); // performer ids currently in extras pool
 
     let currentProjectId = null;
+    let lastUpdated = 0; // unix timestamp of last file save
+
+    // Settings
+    let settings = {
+        separateMF: false // whether to separate M/F roles in character list
+    };
 
     // Helpers
     const $ = (sel) => document.querySelector(sel);
@@ -26,9 +32,9 @@
         )?.[0];
         performers[id].name = newName;
     }
-    function newPerformer(name, gender = 'M', performed = 0) {
+    function newPerformer(name, gender = 'M', performed = 0, lastPerformed = 0) {
         const id = 'p' + (performerIdCounter++);
-        performers[id] = { id, name, gender, performed: clamp(performed, 0, 9), everAssignedThisSession: false };
+        performers[id] = { id, name, gender, performed: clamp(performed, 0, 9), everAssignedThisSession: false, lastPerformed: lastPerformed };
         return id;
     }
     function newProject(name) {
@@ -205,13 +211,13 @@
             return;
         }
         const sortedCharacters = [...proj.characters].sort((a, b) => {
-            // Gender priority: M first, F second
-            if (a.gender !== b.gender) {
+            // Gender priority: M first, F second (only if separateMF is enabled)
+            if (settings.separateMF && a.gender !== b.gender) {
                 if (a.gender === 'M') return -1;
                 if (b.gender === 'M') return 1;
             }
 
-            // Same gender → alphabetical by name
+            // Alphabetical by name
             return a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
         });
 
@@ -596,6 +602,12 @@
         renderAll();
     });
 
+    // Separate M/F toggle
+    $('#separate-mf-toggle').addEventListener('change', (e) => {
+        settings.separateMF = e.target.checked;
+        renderAll();
+    });
+
     // Edit performers modal logic
     $('#edit-performer-cancel').addEventListener('click', () => closeModal('#edit-performer-modal'));
     $('#edit-performer-submit').addEventListener('click', () => {
@@ -794,16 +806,35 @@
     function exportData(fileName) {
         // For each performer, increment performed if they were assigned at least once this session, else decrement.
         // Then export performers and projects (characters only — no assignments).
+        const currentTime = Date.now();
+        const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
+
+        // Check if last update was 24+ hours ago
+        const canDecrement = !lastUpdated || (currentTime - lastUpdated) >= TWENTY_FOUR_HOURS;
+
         const outPerformers = [];
         for (const id in performers) {
             const p = performers[id];
-            let newPerformed = p.performed
-            if (!loadedFileSaveDate || !isToday(loadedFileSaveDate)) {
-                newPerformed = p.everAssignedThisSession ? clamp(p.performed + 1, 0, 9) : clamp(p.performed - 1, 0, 9);
+            let newPerformed = p.performed;
+
+            if (p.everAssignedThisSession) {
+                // Performer was assigned a role today
+                const canIncrement = !p.lastPerformed || (currentTime - p.lastPerformed) >= TWENTY_FOUR_HOURS;
+                if (canIncrement) {
+                    newPerformed = clamp(p.performed + 1, 0, 9);
+                    p.lastPerformed = currentTime; // Update internal state
+                }
+            } else if (canDecrement) {
+                // Performer wasn't assigned and we can decrement (24+ hours since last update)
+                newPerformed = clamp(p.performed - 1, 0, 9);
             }
+
             p.performed = newPerformed; // update internal state
-            outPerformers.push({ name: p.name, gender: p.gender, performed: p.performed });
+            outPerformers.push({ name: p.name, gender: p.gender, performed: p.performed, lastPerformed: p.lastPerformed || 0 });
         }
+
+        lastUpdated = currentTime; // Update global lastUpdated
+
         const outProjects = projects.map(proj => ({
             name: proj.name,
             characters: proj.characters.map(c => ({ name: c.name, gender: c.gender }))
@@ -814,7 +845,7 @@
             loadedFileName = fileName;
             loadedFileSaveDate = new Date(parseInt(saveDate));
         }
-        const blob = new Blob([JSON.stringify({ saveDate: saveDate, performers: outPerformers, projects: outProjects }, null, 2)], { type: 'application/json' });
+        const blob = new Blob([JSON.stringify({ saveDate: saveDate, lastUpdated: lastUpdated, performers: outPerformers, projects: outProjects, settings: settings }, null, 2)], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
@@ -839,6 +870,8 @@
         projectIdCounter = 1;
         characterIdCounter = 1;
         currentProjectId = null;
+        // load lastUpdated
+        lastUpdated = data.lastUpdated || 0;
         // load performers
         for (const p of data.performers) {
             // validate fields
@@ -846,7 +879,8 @@
             if (!name) continue;
             const gender = (p.gender === 'F') ? 'F' : 'M';
             const performed = clamp(parseInt(p.performed || 0, 10) || 0, 0, 9);
-            newPerformer(name, gender, performed);
+            const lastPerformed = p.lastPerformed || 0;
+            newPerformer(name, gender, performed, lastPerformed);
         }
         // load projects and characters
         for (const pr of data.projects) {
@@ -860,6 +894,15 @@
                 }
             }
         }
+        // load settings
+        if (data.settings) {
+            settings.separateMF = Boolean(data.settings.separateMF);
+        } else {
+            settings.separateMF = false;
+        }
+        // Update checkbox to match loaded settings
+        const checkbox = $('#separate-mf-toggle');
+        if (checkbox) checkbox.checked = settings.separateMF;
         // ensure a currentProjectId
         if (!currentProjectId && projects.length) currentProjectId = projects[0].id;
         renderAll();
