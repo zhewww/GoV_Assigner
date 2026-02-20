@@ -34,7 +34,7 @@
     }
     function newPerformer(name, gender = 'M', performed = 0, lastPerformed = 0) {
         const id = 'p' + (performerIdCounter++);
-        performers[id] = { id, name, gender, performed: clamp(performed, 0, 9), everAssignedThisSession: false, lastPerformed: lastPerformed };
+        performers[id] = { id, name, gender, performed: clamp(performed, 0, 9), everAssignedThisSession: false, lastPerformed: lastPerformed, locked: false };
         return id;
     }
     function newProject(name) {
@@ -53,7 +53,7 @@
     function newCharacter(projectId, name, gender = 'M') {
         const id = 'c' + (characterIdCounter++);
         const proj = projects.find(p => p.id === projectId);
-        proj.characters.push({ id, name, gender, assigned: null });
+        proj.characters.push({ id, name, gender, assigned: null, locked: false });
         return id;
     }
     function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
@@ -179,6 +179,7 @@
             <div class="item-name">${escapeHtml(p.name)}</div>
         </div>
         <div>
+            <button class="small-btn lock-btn" data-action="toggle-lock-extra">${p.locked ? '🔒' : '🔓'}</button>
             <button class="small-btn" data-action="to-performer-list">⇇</button>
         </div>
       `;
@@ -194,6 +195,10 @@
             });
             item.querySelector('[data-action="to-performer-list"]').addEventListener('click', () => {
                 extras.delete(id);
+                renderAll();
+            });
+            item.querySelector('[data-action="toggle-lock-extra"]').addEventListener('click', () => {
+                p.locked = !p.locked;
                 renderAll();
             });
 
@@ -241,6 +246,7 @@
                                 <strong>${escapeHtml(ch.name)}</strong>
                             </div>
                             <div>
+                                <button class="small-btn lock-btn" data-action="toggle-lock-character">${ch.locked ? '🔒' : '🔓'}</button>
                                 <button class="small-btn" data-action="random-char">🎲</button>
                                 <button class="delete-btn" data-action="delete-char">🔪</button>
                             </div>
@@ -261,6 +267,10 @@
             });
             card.querySelector('[data-action="delete-char"]').addEventListener('click', () => {
                 confirmAction(`Delete character "${ch.name}"?`, () => deleteCharacter(ch.id));
+            });
+            card.querySelector('[data-action="toggle-lock-character"]').addEventListener('click', () => {
+                ch.locked = !ch.locked;
+                renderAll();
             });
             
             // handle no-image click to show modal with expected path
@@ -285,8 +295,9 @@
             }
             
             card.querySelector('[data-action="random-char"]').addEventListener('click', () => {
+                if (ch.locked) return;
                 // Find all extras matching this character's gender
-                const candidates = Array.from(extras).filter(pid => performers[pid] && performers[pid].gender === ch.gender);
+                const candidates = Array.from(extras).filter(pid => performers[pid] && performers[pid].gender === ch.gender && !performers[pid].locked);
                 if (candidates.length === 0) {
                     console.log(`No available performers in Extras for gender ${ch.gender}.`);
                     return;
@@ -753,9 +764,9 @@
         const proj = projects.find(p => p.id === currentProjectId);
         if (!proj) return;
 
-        // Move all current assignments to Extras
+        // Move all current assignments to Extras (except for locked characters)
         for (const ch of proj.characters) {
-            if (ch.assigned) {
+            if (ch.assigned && !ch.locked) {
                 extras.add(ch.assigned);
                 ch.assigned = null;
             }
@@ -763,15 +774,16 @@
 
         // For each character attempt to choose from extras matching gender
         for (const ch of proj.characters) {
+            if (ch.locked) continue;
             let candidates = []
             if (prioritizeUnassigned) {
                 candidates = Array.from(extras).filter(pid =>
-                    performers[pid] && performers[pid].gender === ch.gender && !previouslyAssigned.has(pid)
+                    performers[pid] && performers[pid].gender === ch.gender && !previouslyAssigned.has(pid) && !performers[pid].locked
                 );
             }
             if (candidates.length === 0) {
                 candidates = Array.from(extras).filter(pid =>
-                    performers[pid] && performers[pid].gender === ch.gender
+                    performers[pid] && performers[pid].gender === ch.gender && !performers[pid].locked
                 );
             }
             if (candidates.length === 0) {
@@ -815,9 +827,9 @@
             if (ch.assigned) previouslyAssigned.add(ch.assigned);
         }
 
-        // Move all current assignments to Extras
+        // Move all current assignments to Extras (except for locked characters)
         for (const ch of proj.characters) {
-            if (ch.assigned) {
+            if (ch.assigned && !ch.locked) {
                 extras.add(ch.assigned);
                 ch.assigned = null;
             }
@@ -913,7 +925,8 @@
             const gender = (p.gender === 'F') ? 'F' : 'M';
             const performed = clamp(parseInt(p.performed || 0, 10) || 0, 0, 9);
             const lastPerformed = p.lastPerformed || 0;
-            newPerformer(name, gender, performed, lastPerformed);
+            const id = newPerformer(name, gender, performed, lastPerformed);
+            performers[id].locked = false;
         }
         // load projects and characters
         for (const pr of data.projects) {
@@ -924,6 +937,8 @@
                     if (!name) continue;
                     const gender = (ch.gender === 'F') ? 'F' : 'M';
                     newCharacter(projId, name, gender);
+                    const char = projects.find(p => p.id === projId).characters[projects.find(p => p.id === projId).characters.length - 1];
+                    char.locked = false;
                 }
             }
         }
