@@ -102,7 +102,12 @@
         container.innerHTML = '';
         const list = Object.values(performers)
             .filter(p => !extras.has(p.id) && !isAssigned(p.id))
-            .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
+            .sort((a, b) => {
+                if (a.gender !== b.gender) {
+                    return a.gender === 'F' ? -1 : 1;
+                }
+                return a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
+            });
         if (!list.length) {
             container.innerHTML = `<div class="empty">No performers. Add performers or drag from Extras.</div>`;
             return;
