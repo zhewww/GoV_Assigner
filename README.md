@@ -6,6 +6,7 @@ Locally ran web app to randomly assign roles for comic dubbing.
 Installation:
 - Download the files by clicking the green Code Button > Download ZIP
 <img width="323" height="268" alt="image" src="https://github.com/user-attachments/assets/3bb927a2-916e-4e36-9233-409e9ca14a19" />
+
 - Unzip the files. 
 - Run index.html. Do not attempt to do this from inside the zip file, the program will not work.
 
