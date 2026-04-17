@@ -1,102 +1,69 @@
 {
-  "saveDate": 1770267902740,
-  "lastUpdated": 1770267902740,
+  "saveDate": 1776397447265,
   "performers": [
     {
       "name": "Eddie",
-      "gender": "M",
-      "performed": 1,
-      "lastPerformed": 1770267598668
+      "gender": "M"
     },
     {
       "name": "Johanna",
-      "gender": "M",
-      "performed": 1,
-      "lastPerformed": 1770267598668
+      "gender": "M"
     },
     {
       "name": "Ethelinda",
-      "gender": "F",
-      "performed": 1,
-      "lastPerformed": 1770267598668
+      "gender": "F"
     },
     {
       "name": "Lidia",
-      "gender": "F",
-      "performed": 1,
-      "lastPerformed": 1770267598668
+      "gender": "F"
     },
     {
       "name": "Trudie",
-      "gender": "F",
-      "performed": 0,
-      "lastPerformed": 0
+      "gender": "F"
     },
     {
       "name": "Mellán",
-      "gender": "F",
-      "performed": 1,
-      "lastPerformed": 1770267598668
+      "gender": "F"
     },
     {
       "name": "Sluaghadhán",
-      "gender": "M",
-      "performed": 0,
-      "lastPerformed": 0
+      "gender": "M"
     },
     {
       "name": "Efthymios",
-      "gender": "M",
-      "performed": 1,
-      "lastPerformed": 1770267598668
+      "gender": "M"
     },
     {
       "name": "Riad",
-      "gender": "F",
-      "performed": 0,
-      "lastPerformed": 0
+      "gender": "F"
     },
     {
       "name": "Ala",
-      "gender": "F",
-      "performed": 1,
-      "lastPerformed": 1770267598668
+      "gender": "F"
     },
     {
       "name": "Raheem",
-      "gender": "M",
-      "performed": 0,
-      "lastPerformed": 0
+      "gender": "M"
     },
     {
       "name": "Silvestre",
-      "gender": "M",
-      "performed": 0,
-      "lastPerformed": 0
+      "gender": "M"
     },
     {
       "name": "Mira",
-      "gender": "F",
-      "performed": 1,
-      "lastPerformed": 1770267902740
+      "gender": "F"
     },
     {
       "name": "Ramakant",
-      "gender": "M",
-      "performed": 1,
-      "lastPerformed": 1770267598668
+      "gender": "M"
     },
     {
       "name": "Chandrasekhar",
-      "gender": "M",
-      "performed": 1,
-      "lastPerformed": 1770267598668
+      "gender": "M"
     },
     {
       "name": "Kostadin",
-      "gender": "M",
-      "performed": 1,
-      "lastPerformed": 1770267598668
+      "gender": "M"
     }
   ],
   "projects": [

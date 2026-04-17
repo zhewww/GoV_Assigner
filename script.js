@@ -10,12 +10,64 @@
     let loadedFileName = null
     let loadedFileSaveDate = null
 
-    const performers = {}; // id -> {id,name,gender,performed,everAssignedThisSession,lastPerformed}
+    const performers = {}; // id -> {id,name,gender,everAssignedThisSession}
     const projects = []; // {id,name,characters:[{id,name,gender,assigned:null}]}
     let extras = new Set(); // performer ids currently in extras pool
 
     let currentProjectId = null;
-    let lastUpdated = 0; // unix timestamp of last file save
+
+    // Assignment stats: name -> {score, lastAssigned}
+    let assignmentStats = {};
+    let scoreEditPerformerId = null;
+
+    // Load stats from localStorage on init
+    function loadAssignmentStats() {
+        const stored = localStorage.getItem('assignmentStats');
+        if (stored) {
+            const stats = JSON.parse(stored);
+            const now = Date.now();
+            const lastAssignedTimes = Object.values(stats).map(s => s.lastAssigned || 0);
+            const maxLast = lastAssignedTimes.length ? Math.max(...lastAssignedTimes) : 0;
+            if (maxLast && now - maxLast > 48 * 60 * 60 * 1000) {
+                // Clear if more than 48 hours
+                localStorage.removeItem('assignmentStats');
+                assignmentStats = {};
+            } else {
+                assignmentStats = stats;
+            }
+        }
+    }
+
+    function saveAssignmentStats() {
+        localStorage.setItem('assignmentStats', JSON.stringify(assignmentStats));
+    }
+
+    function openScoreModal(performerId) {
+        const performer = performers[performerId];
+        if (!performer) return;
+        scoreEditPerformerId = performerId;
+        const currentScore = assignmentStats[performer.name]?.score ?? 0;
+        $('#score-edit-title').textContent = `Edit score for ${performer.name}`;
+        $('#score-edit-input').value = String(currentScore);
+        $('#score-edit-input').placeholder = String(currentScore);
+        $('#score-edit-error').textContent = '';
+        openModal('#score-edit-modal');
+        $('#score-edit-input').focus();
+    }
+
+    function closeScoreModal() {
+        closeModal('#score-edit-modal');
+        scoreEditPerformerId = null;
+    }
+
+    function updateAssignment(performerName) {
+        const now = Date.now();
+        assignmentStats[performerName] = {
+            score: (assignmentStats[performerName]?.score || 0) + 1,
+            lastAssigned: now
+        };
+        saveAssignmentStats();
+    }
 
     // Settings
     let settings = {
@@ -31,10 +83,16 @@
             ([_, value]) => value.name === oldName
         )?.[0];
         performers[id].name = newName;
+        // update stats key
+        if (assignmentStats[oldName]) {
+            assignmentStats[newName] = assignmentStats[oldName];
+            delete assignmentStats[oldName];
+            saveAssignmentStats();
+        }
     }
-    function newPerformer(name, gender = 'M', performed = 0, lastPerformed = 0) {
+    function newPerformer(name, gender = 'M') {
         const id = 'p' + (performerIdCounter++);
-        performers[id] = { id, name, gender, performed: clamp(performed, 0, 9), everAssignedThisSession: false, lastPerformed: lastPerformed, locked: false };
+        performers[id] = { id, name, gender, everAssignedThisSession: false, locked: false };
         return id;
     }
     function newProject(name) {
@@ -56,7 +114,6 @@
         proj.characters.push({ id, name, gender, assigned: null, locked: false });
         return id;
     }
-    function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
 
     function applyGenderClass(btn, gender) {
         btn.classList.remove('gender-m', 'gender-f');
@@ -122,6 +179,7 @@
         <div class="item-left">
             <button class="gender-btn ${p.gender === 'M' ? 'gender-m' : 'gender-f'}" data-action="toggle-gender">${p.gender}</button>
             <div class="item-name">${escapeHtml(p.name)}</div>
+            <span class="score" data-action="change-score">${assignmentStats[p.name]?.score || 0}</span>
         </div>
         <div>
           <button class="small-btn" data-action="to-extras">⇉</button>
@@ -155,6 +213,9 @@
             item.querySelector('[data-action="delete"]').addEventListener('click', () => {
                 confirmAction(`Delete performer "${p.name}"?`, () => deletePerformer(p.id));
             });
+            item.querySelector('[data-action="change-score"]').addEventListener('click', () => {
+                openScoreModal(p.id);
+            });
 
             container.appendChild(item);
         });
@@ -182,6 +243,7 @@
             <div style="text-align:center;background-color:var(--muted);color:var(--bg);width:26px;border-radius:50%;padding:2px">${orderNum}</div>
             <button class="gender-btn ${p.gender === 'M' ? 'gender-m' : 'gender-f'}" data-action="toggle-gender">${p.gender}</button>
             <div class="item-name">${escapeHtml(p.name)}</div>
+            <span class="score" data-action="change-score">${assignmentStats[p.name]?.score || 0}</span>
         </div>
         <div>
             <button class="small-btn lock-btn" data-action="toggle-lock-extra">${p.locked ? '🔒' : '🔓'}</button>
@@ -205,6 +267,9 @@
             item.querySelector('[data-action="toggle-lock-extra"]').addEventListener('click', () => {
                 p.locked = !p.locked;
                 renderAll();
+            });
+            item.querySelector('[data-action="change-score"]').addEventListener('click', () => {
+                openScoreModal(p.id);
             });
 
             container.appendChild(item);
@@ -307,29 +372,14 @@
                     console.log(`No available performers in Extras for gender ${ch.gender}.`);
                     return;
                 }
-                // Weighted random pick using performed penalty
-                let totalWeight = 0;
-                const weights = {};
-                candidates.forEach(entry => {
-                    const perf = performers[entry];
-                    const weight = 10 - perf.performed; // 1..10
-                    weights[entry] = weight;
-                    totalWeight += weight;
+                // Prioritize lowest score
+                const sortedCandidates = candidates.sort((a, b) => {
+                    const scoreA = assignmentStats[performers[a].name]?.score || 0;
+                    const scoreB = assignmentStats[performers[b].name]?.score || 0;
+                    return scoreA - scoreB;
                 });
-
-                // Debug log
-                console.log(`Character: ${ch.name}`);
-                candidates.forEach(entry => {
-                    const p = performers[entry];
-                    console.log(weights[entry])
-                    console.log(totalWeight)
-                    const prob = weights[entry] / totalWeight;
-                    console.log(`  ${p.name}: ${(prob * 100).toFixed(2)}%`);
-                });
-
-                // Pick a performer
-                const pickIdx = weightedRandomPick(weights, totalWeight);
-                dropOntoCharacter(pickIdx, ch.id);
+                const pick = sortedCandidates[0];
+                dropOntoCharacter(pick, ch.id);
             });
 
             container.appendChild(card);
@@ -432,6 +482,8 @@
         ch.assigned = performerId;
         // mark as assigned this session
         performers[performerId].everAssignedThisSession = true;
+        // update stats
+        updateAssignment(performers[performerId].name);
         renderAll();
     }
 
@@ -443,7 +495,7 @@
         const ch = findCharacterByAssignedPerformer(performerId);
         if (ch) ch.assigned = null;
         extras.add(performerId);
-        console.log(`[DEBUG] Performer "${performers[performerId].name}" moved to Extras. Performed value: ${performers[performerId].performed}`);
+        console.log(`[DEBUG] Performer "${performers[performerId].name}" moved to Extras.`);
         renderAll();
     }
 
@@ -476,7 +528,11 @@
         for (const proj of projects) {
             for (const ch of proj.characters) if (ch.assigned === id) ch.assigned = null;
         }
+        const name = performers[id].name;
         delete performers[id];
+        // remove from stats
+        delete assignmentStats[name];
+        saveAssignmentStats();
         renderAll();
     }
 
@@ -543,8 +599,8 @@
             const exists = Object.values(performers).some(p => p.name.toLowerCase() === name.toLowerCase());
             if (exists) { err.textContent = `Performer "${name}" already exists.`; return; }
         }
-        // add with default M and performed=0
-        lines.forEach(name => newPerformer(name, 'M', 0));
+        // add with default M
+        lines.forEach(name => newPerformer(name, 'M'));
         closeModal('#add-performers-modal');
         renderAll();
     });
@@ -673,6 +729,46 @@
         renderAll();
     });
 
+    $('#score-edit-cancel').addEventListener('click', () => closeScoreModal());
+    $('#score-edit-increment').addEventListener('click', () => {
+        const input = $('#score-edit-input');
+        const current = parseInt(input.value, 10);
+        input.value = Number.isNaN(current) ? 1 : current + 1;
+    });
+    $('#score-edit-decrement').addEventListener('click', () => {
+        const input = $('#score-edit-input');
+        const current = parseInt(input.value, 10);
+        const next = Number.isNaN(current) ? 0 : Math.max(0, current - 1);
+        input.value = next;
+    });
+    $('#score-edit-submit').addEventListener('click', () => {
+        const err = $('#score-edit-error');
+        err.textContent = '';
+        const value = $('#score-edit-input').value.trim();
+        const score = parseInt(value, 10);
+        if (value === '') {
+            err.textContent = 'Please enter a score.';
+            return;
+        }
+        if (Number.isNaN(score) || score < 0) {
+            err.textContent = 'Score must be a number 0 or higher.';
+            return;
+        }
+        const performerId = scoreEditPerformerId;
+        if (!performerId || !performers[performerId]) {
+            err.textContent = 'Invalid performer.';
+            return;
+        }
+        const performer = performers[performerId];
+        assignmentStats[performer.name] = {
+            score,
+            lastAssigned: assignmentStats[performer.name]?.lastAssigned || Date.now()
+        };
+        saveAssignmentStats();
+        closeScoreModal();
+        renderAll();
+    });
+
     // Save file as modal logic
     $('#save-as-cancel').addEventListener('click', () => closeModal('#save-as-modal'));
     $('#save-as-submit').addEventListener('click', () => {
@@ -795,28 +891,19 @@
                 console.log(`[RANDOM] No candidates for character "${ch.name}" (gender ${ch.gender}).`);
                 continue;
             }
-            // compute weights
-            const weights = {};
-            let totalWeight = 0;
-            candidates.forEach(pid => {
-                const perf = performers[pid];
-                let baseWeight = (10 - perf.performed); // 1..10
-                weights[pid] = baseWeight;
-                totalWeight += baseWeight;
+            // Prioritize lowest score
+            const sortedCandidates = candidates.sort((a, b) => {
+                const scoreA = assignmentStats[performers[a].name]?.score || 0;
+                const scoreB = assignmentStats[performers[b].name]?.score || 0;
+                return scoreA - scoreB;
             });
-            // Logging: show character and each performer's probability
-            console.log(`Character: ${ch.name}`);
-            candidates.forEach(pid => {
-                const p = performers[pid];
-                const prob = weights[pid] / totalWeight;
-                console.log(`  ${p.name}: ${(prob * 100).toFixed(2)}%`);
-            });
-            // weighted random pick
-            const pick = weightedRandomPick(weights, totalWeight);
+            const pick = sortedCandidates[0];
             // assign
             ch.assigned = pick;
             extras.delete(pick);
             performers[pick].everAssignedThisSession = true;
+            // update stats
+            updateAssignment(performers[pick].name);
         }
         shuffleExtras()
         renderAll();
@@ -842,48 +929,27 @@
         randomAssign(true, previouslyAssigned)
     }
 
-    function weightedRandomPick(weights, total) {
-        let r = Math.random() * total;
-        for (const pid in weights) {
-            r -= weights[pid];
-            if (r <= 0) return pid;
-        }
-        // fallback
-        return Object.keys(weights)[0];
+    // --- Export / Import implementation ---
+    function formatSaveDate(timestamp) {
+        const date = new Date(timestamp);
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
     }
 
-    // --- Export / Import implementation ---
+    function sanitizeExportBaseName(fileName) {
+        const underscoreIndex = fileName.indexOf('_');
+        return underscoreIndex === -1 ? fileName : fileName.slice(0, underscoreIndex);
+    }
+
     function exportData(fileName) {
-        // For each performer, increment performed if they were assigned at least once this session, else decrement.
-        // Then export performers and projects (characters only — no assignments).
-        const currentTime = Date.now();
-        const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
-
-        // Check if last update was 24+ hours ago
-        const canDecrement = !lastUpdated || (currentTime - lastUpdated) >= TWENTY_FOUR_HOURS;
-
+        fileName = sanitizeExportBaseName(fileName);
         const outPerformers = [];
         for (const id in performers) {
             const p = performers[id];
-            let newPerformed = p.performed;
-
-            if (p.everAssignedThisSession) {
-                // Performer was assigned a role today
-                const canIncrement = !p.lastPerformed || (currentTime - p.lastPerformed) >= TWENTY_FOUR_HOURS;
-                if (canIncrement) {
-                    newPerformed = clamp(p.performed + 1, 0, 9);
-                    p.lastPerformed = currentTime; // Update internal state
-                }
-            } else if (canDecrement) {
-                // Performer wasn't assigned and we can decrement (24+ hours since last update)
-                newPerformed = clamp(p.performed - 1, 0, 9);
-            }
-
-            p.performed = newPerformed; // update internal state
-            outPerformers.push({ name: p.name, gender: p.gender, performed: p.performed, lastPerformed: p.lastPerformed || 0 });
+            outPerformers.push({ name: p.name, gender: p.gender });
         }
-
-        lastUpdated = currentTime; // Update global lastUpdated
 
         const outProjects = projects.map(proj => ({
             name: proj.name,
@@ -891,15 +957,18 @@
         }));
 
         const saveDate = Date.now();
+        const formattedDate = formatSaveDate(saveDate);
+        const downloadName = `${fileName}_${formattedDate}`;
+
         if(!loadedFileName) {
             loadedFileName = fileName;
             loadedFileSaveDate = new Date(parseInt(saveDate));
         }
-        const blob = new Blob([JSON.stringify({ saveDate: saveDate, lastUpdated: lastUpdated, performers: outPerformers, projects: outProjects, settings: settings }, null, 2)], { type: 'application/json' });
+        const blob = new Blob([JSON.stringify({ saveDate: saveDate, performers: outPerformers, projects: outProjects, settings: settings }, null, 2)], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = fileName + '.json';
+        a.download = downloadName + '.json';
         document.body.appendChild(a);
         a.click();
         a.remove();
@@ -920,17 +989,13 @@
         projectIdCounter = 1;
         characterIdCounter = 1;
         currentProjectId = null;
-        // load lastUpdated
-        lastUpdated = data.lastUpdated || 0;
         // load performers
         for (const p of data.performers) {
             // validate fields
             const name = String(p.name || '').trim();
             if (!name) continue;
             const gender = (p.gender === 'F') ? 'F' : 'M';
-            const performed = clamp(parseInt(p.performed || 0, 10) || 0, 0, 9);
-            const lastPerformed = p.lastPerformed || 0;
-            const id = newPerformer(name, gender, performed, lastPerformed);
+            const id = newPerformer(name, gender);
             performers[id].locked = false;
         }
         // load projects and characters
@@ -996,6 +1061,9 @@
 
     // Global dropzones
     setupGlobalDnD();
+
+    // Load stats
+    loadAssignmentStats();
 
     // initial render
     renderAll();

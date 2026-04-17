@@ -134,10 +134,28 @@
         <div id="edit-performer-error" class="error"></div>
     </div>
 
+    <div id="score-edit-modal" class="modal hidden">
+        <h3 id="score-edit-title">Edit Score</h3>
+        <div class="score-edit-row">
+            <input id="score-edit-input" type="number" min="0" placeholder="0"
+                style="flex:1;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.08);background:var(--input-bg);color:var(--text)" />
+            <div class="score-edit-buttons">
+                <button id="score-edit-increment" class="score-edit-btn">+</button>
+                <button id="score-edit-decrement" class="score-edit-btn">-</button>
+            </div>
+        </div>
+        <div class="modal-row">
+            <button id="score-edit-cancel">Cancel</button>
+            <button id="score-edit-submit">Save</button>
+        </div>
+        <div id="score-edit-error" class="error"></div>
+    </div>
+
     <div id="save-as-modal" class="modal hidden">
         <h3>Save as</h3>
         <input id="save-as-input" type="text" placeholder="Save file name"
             style="width:100%;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.08);background:var(--input-bg);color:var(--text)" />
+        <div class="hint" style="margin-top:8px;">Do not use underscores in the file name. The date is appended automatically.</div>
         <div class="modal-row">
             <button id="save-as-cancel">Cancel</button>
             <button id="save-as-submit">Download</button>

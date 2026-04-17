@@ -156,6 +156,13 @@ main {
   color: var(--text)
 }
 
+.score {
+  font-weight: bold;
+  color: var(--accent);
+  margin-left: 8px;
+  cursor: pointer;
+}
+
 .gender-btn,
 .small-btn {
   padding: 6px 8px;
@@ -351,13 +358,45 @@ main {
   display: none
 }
 
-.modal textarea {
+.modal textarea,
+.modal input {
   width: 100%;
   padding: 8px;
   border-radius: 8px;
   border: 1px solid rgba(255, 255, 255, 0.04);
   background: var(--input-bg);
   color: var(--text)
+}
+
+.score-edit-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.score-edit-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.score-edit-btn {
+  min-width: 30px;
+  min-height: 30px;
+  border-radius: 8px;
+  font-size: 16px;
+  padding: 0;
+}
+
+.score-edit-row input[type="number"]::-webkit-outer-spin-button,
+.score-edit-row input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.score-edit-row input[type="number"] {
+  -moz-appearance: textfield;
 }
 
 .modal-row {
