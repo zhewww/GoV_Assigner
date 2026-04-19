@@ -224,7 +224,11 @@
     function renderExtras() {
         const container = $('#extras-dropzone');
         container.innerHTML = '';
-        const arr = Array.from(extras)
+        const arr = Array.from(extras).sort((a, b) => {
+            const scoreA = assignmentStats[performers[a].name]?.score || 0;
+            const scoreB = assignmentStats[performers[b].name]?.score || 0;
+            return scoreA - scoreB;
+        });
         if (!arr.length) {
             container.innerHTML = `<div class="empty">No performers in Extras.</div>`;
             return;
