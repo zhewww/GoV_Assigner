@@ -287,6 +287,21 @@
         });
     }
 
+    function shuffleExtras() {
+        // Step 1: Convert to array
+        const arr = Array.from(extras);
+
+        // Step 2: Shuffle array using Fisher–Yates algorithm
+        for (let i = arr.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [arr[i], arr[j]] = [arr[j], arr[i]]; // swap
+        }
+
+        // Step 3: Convert back to Set (optional)
+        extras = new Set(arr);
+        renderExtras();
+    }
+
     function renderCharacterList() {
         const container = $('#character-list');
         container.innerHTML = '';
@@ -809,6 +824,9 @@
     });
 
     // Random assign button
+    $('#shuffle-extras-btn').addEventListener('click', () => {
+        shuffleExtras();
+    });
     $('#random-assign-btn').addEventListener('click', () => {
         randomAssign(false);
     });
@@ -911,6 +929,7 @@
             // update stats
             updateAssignment(performers[pick].name);
         }
+        shuffleExtras();
         renderAll();
     }
 
@@ -1079,7 +1098,8 @@
         renderAll,
         moveToExtras,
         randomAssign,
-        swapAssign
+        swapAssign,
+        shuffleExtras
     };
 
 })();
