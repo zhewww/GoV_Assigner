@@ -819,6 +819,15 @@
     });
 
     // Export / Import
+    $('#reset-scores-btn').addEventListener('click', () => {
+        confirmAction('Are you sure you want to reset all performer scores to 0?', () => {
+            for (let name in assignmentStats) {
+                assignmentStats[name].score = 0;
+            }
+            saveAssignmentStats();
+            renderAll();
+        }, 'Reset Scores');
+    });
     $('#export-btn').addEventListener('click', () => {
         if (!loadedFileName) {
             $('#save-as-input').value = '';
