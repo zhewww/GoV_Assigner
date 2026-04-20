@@ -1,7 +1,7 @@
-﻿# GoV_Assigner
+# GoV_Assigner
 Locally ran web app to randomly assign roles for comic dubbing.
 
-<img width="2555" height="1254" alt="image" src="https://github.com/user-attachments/assets/4f8de271-99ae-49f3-a9a8-bf4136e19632" />
+<img width="2558" height="1261" alt="image" src="https://github.com/user-attachments/assets/43ab5100-998c-4a79-8251-315c6fc5b12d" />
 
 Installation:
 - Download the files by clicking the green Code Button > Download ZIP
