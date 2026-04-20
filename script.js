@@ -78,6 +78,13 @@
     const $ = (sel) => document.querySelector(sel);
     const $$ = (sel) => Array.from(document.querySelectorAll(sel));
 
+    function shuffleArray(array) {
+        for (let i = array.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [array[i], array[j]] = [array[j], array[i]];
+        }
+    }
+
     function editPerformerName(oldName, newName) {
         const id = Object.entries(performers).find(
             ([_, value]) => value.name === oldName
@@ -850,21 +857,6 @@
         reader.readAsText(file);
     });
 
-    // --- Random assignment logic ---
-    function shuffleExtras() {
-        // Step 1: Convert to array
-        const arr = Array.from(extras);
-
-        // Step 2: Shuffle array using Fisher–Yates algorithm
-        for (let i = arr.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [arr[i], arr[j]] = [arr[j], arr[i]]; // swap
-        }
-
-        // Step 3: Convert back to Set (optional)
-        extras = new Set(arr);
-    }
-
     function randomAssign(prioritizeUnassigned = false, previouslyAssigned = new Set()) {
         const proj = projects.find(p => p.id === currentProjectId);
         if (!proj) return;
@@ -895,6 +887,7 @@
                 console.log(`[RANDOM] No candidates for character "${ch.name}" (gender ${ch.gender}).`);
                 continue;
             }
+            shuffleArray(candidates);
             // Prioritize lowest score
             const sortedCandidates = candidates.sort((a, b) => {
                 const scoreA = assignmentStats[performers[a].name]?.score || 0;
@@ -909,7 +902,6 @@
             // update stats
             updateAssignment(performers[pick].name);
         }
-        shuffleExtras()
         renderAll();
     }
 
