@@ -246,7 +246,7 @@
             const p = performers[id];
             if (!p) return;
             const item = document.createElement('div');
-            item.className = 'extra-item';
+            item.className = 'extra-item' + (p.locked ? ' extra-item-locked' : '');
             item.draggable = true;
             item.dataset.id = id;
             item.innerHTML = `
@@ -827,9 +827,9 @@
     $('#shuffle-extras-btn').addEventListener('click', () => {
         shuffleExtras();
     });
-    $('#random-assign-btn').addEventListener('click', () => {
-        randomAssign(false);
-    });
+    // $('#random-assign-btn').addEventListener('click', () => {
+    //     randomAssign(false);
+    // });
 
     // Swap button
     $('#swap-btn').addEventListener('click', () => {
