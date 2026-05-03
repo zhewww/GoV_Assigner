@@ -163,6 +163,34 @@ main {
   cursor: pointer;
 }
 
+.score-container {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 8px;
+}
+
+.score-container .score {
+  margin-left: 0;
+}
+
+.score-adjust-btn {
+  background: none;
+  border: none;
+  color: var(--accent);
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: bold;
+  padding: 2px 4px;
+  line-height: 1;
+  opacity: 0.7;
+  transition: opacity 0.15s ease;
+}
+
+.score-adjust-btn:hover {
+  opacity: 1;
+}
+
 .gender-btn,
 .small-btn {
   padding: 6px 8px;

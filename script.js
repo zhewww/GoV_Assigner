@@ -254,7 +254,11 @@
             <div style="text-align:center;background-color:var(--muted);color:var(--bg);width:26px;border-radius:50%;padding:2px">${orderNum}</div>
             <button class="gender-btn ${p.gender === 'M' ? 'gender-m' : 'gender-f'}" data-action="toggle-gender">${p.gender}</button>
             <div class="item-name">${escapeHtml(p.name)}</div>
-            <span class="score" data-action="change-score">${assignmentStats[p.name]?.score || 0}</span>
+            <div class="score-container">
+                <button class="score-adjust-btn" data-action="decrease-score">−</button>
+                <span class="score" data-action="change-score">${assignmentStats[p.name]?.score || 0}</span>
+                <button class="score-adjust-btn" data-action="increase-score">+</button>
+            </div>
         </div>
         <div>
             <button class="small-btn lock-btn" data-action="toggle-lock-extra">${p.locked ? '🔒' : '🔓'}</button>
@@ -281,6 +285,24 @@
             });
             item.querySelector('[data-action="change-score"]').addEventListener('click', () => {
                 openScoreModal(p.id);
+            });
+            item.querySelector('[data-action="decrease-score"]').addEventListener('click', () => {
+                const currentScore = assignmentStats[p.name]?.score || 0;
+                assignmentStats[p.name] = {
+                    score: Math.max(0, currentScore - 1),
+                    lastAssigned: assignmentStats[p.name]?.lastAssigned || Date.now()
+                };
+                saveAssignmentStats();
+                renderAll();
+            });
+            item.querySelector('[data-action="increase-score"]').addEventListener('click', () => {
+                const currentScore = assignmentStats[p.name]?.score || 0;
+                assignmentStats[p.name] = {
+                    score: currentScore + 1,
+                    lastAssigned: assignmentStats[p.name]?.lastAssigned || Date.now()
+                };
+                saveAssignmentStats();
+                renderAll();
             });
 
             container.appendChild(item);
