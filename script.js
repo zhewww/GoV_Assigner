@@ -364,7 +364,7 @@
                                 <strong>${escapeHtml(ch.name)}</strong>
                             </div>
                             <div>
-                                <button class="small-btn lock-btn" data-action="toggle-lock-character">${ch.locked ? '🔒' : '🔓'}</button>
+                                <button class="small-btn lock-btn${ch.locked ? ' lock-btn-active' : ''}" data-action="toggle-lock-character">${ch.locked ? '🔒' : '🔓'}</button>
                                 <button class="small-btn" data-action="random-char">🎲</button>
                                 <button class="delete-btn" data-action="delete-char">🔪</button>
                             </div>
