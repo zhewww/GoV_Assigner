@@ -174,7 +174,8 @@ main {
   margin-left: 0;
 }
 
-.score-adjust-btn {
+.score-adjust-btn,
+.top-controls .score-adjust-btn {
   background: none;
   border: none;
   color: var(--accent);
@@ -187,7 +188,8 @@ main {
   transition: opacity 0.15s ease;
 }
 
-.score-adjust-btn:hover {
+.score-adjust-btn:hover,
+.top-controls .score-adjust-btn:hover {
   opacity: 1;
 }
 
@@ -338,9 +340,8 @@ main {
   border: 1px solid rgba(255, 255, 255, 0.02);
 }
 
-.extras .extra-item-locked {
-  background: linear-gradient(180deg, rgba(0, 0, 0, 0.8), rgba(0, 0, 0, 0.4));
-  opacity: 0.7;
+.lock-btn-active {
+  background-color: #992626;
 }
 
 /* Hints & small text */

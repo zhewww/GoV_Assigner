@@ -246,7 +246,7 @@
             const p = performers[id];
             if (!p) return;
             const item = document.createElement('div');
-            item.className = 'extra-item' + (p.locked ? ' extra-item-locked' : '');
+            item.className = 'extra-item';
             item.draggable = true;
             item.dataset.id = id;
             item.innerHTML = `
@@ -261,7 +261,7 @@
             </div>
         </div>
         <div>
-            <button class="small-btn lock-btn" data-action="toggle-lock-extra">${p.locked ? '🔒' : '🔓'}</button>
+            <button class="small-btn lock-btn${p.locked ? ' lock-btn-active' : ''}" data-action="toggle-lock-extra">${p.locked ? '🔒' : '🔓'}</button>
             <button class="small-btn" data-action="to-performer-list">⇇</button>
         </div>
       `;
@@ -848,6 +848,36 @@
     // Random assign button
     $('#shuffle-extras-btn').addEventListener('click', () => {
         shuffleExtras();
+    });
+    $('#decrease-all-extras-btn').addEventListener('click', () => {
+        if (!extras.size) return;
+        const now = Date.now();
+        for (const id of extras) {
+            const name = performers[id]?.name;
+            if (!name) continue;
+            const currentScore = assignmentStats[name]?.score || 0;
+            assignmentStats[name] = {
+                score: Math.max(0, currentScore - 1),
+                lastAssigned: assignmentStats[name]?.lastAssigned || now
+            };
+        }
+        saveAssignmentStats();
+        renderAll();
+    });
+    $('#increase-all-extras-btn').addEventListener('click', () => {
+        if (!extras.size) return;
+        const now = Date.now();
+        for (const id of extras) {
+            const name = performers[id]?.name;
+            if (!name) continue;
+            const currentScore = assignmentStats[name]?.score || 0;
+            assignmentStats[name] = {
+                score: currentScore + 1,
+                lastAssigned: assignmentStats[name]?.lastAssigned || now
+            };
+        }
+        saveAssignmentStats();
+        renderAll();
     });
     // $('#random-assign-btn').addEventListener('click', () => {
     //     randomAssign(false);
