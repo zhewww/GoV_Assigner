@@ -342,18 +342,29 @@
     }
 
     function shuffleExtras() {
-        // Step 1: Convert to array
         const arr = Array.from(extras);
 
-        // Step 2: Shuffle array using Fisher–Yates algorithm
-        for (let i = arr.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [arr[i], arr[j]] = [arr[j], arr[i]]; // swap
-        }
+        arr.sort((a, b) => {
+            const scoreA = assignmentStats[performers[a]?.name]?.score || 0;
+            const scoreB = assignmentStats[performers[b]?.name]?.score || 0;
+            if (scoreA !== scoreB) return scoreA - scoreB;
+            return Math.random() - 0.5;
+        });
 
-        // Step 3: Convert back to Set (optional)
         extras = new Set(arr);
         renderExtras();
+    }
+
+    function sortExtrasByScore() {
+        const arr = Array.from(extras).sort((a, b) => {
+            const scoreA = assignmentStats[performers[a]?.name]?.score || 0;
+            const scoreB = assignmentStats[performers[b]?.name]?.score || 0;
+            if (scoreA !== scoreB) return scoreA - scoreB;
+            const nameA = performers[a]?.name || '';
+            const nameB = performers[b]?.name || '';
+            return nameA.localeCompare(nameB, undefined, { sensitivity: 'base' });
+        });
+        extras = new Set(arr);
     }
 
     function renderCharacterList() {
@@ -976,7 +987,7 @@
         reader.readAsText(file);
     });
 
-    function randomAssign(prioritizeUnassigned = false, previouslyAssigned = new Set()) {
+    function randomAssign(prioritizeUnassigned = false, previouslyAssigned = new Set(), reorderExtras = false) {
         const proj = projects.find(p => p.id === currentProjectId);
         if (!proj) return;
 
@@ -1022,7 +1033,11 @@
             // update stats
             updateAssignment(performers[pick].name);
         }
-        shuffleExtras();
+        if (reorderExtras) {
+            sortExtrasByScore();
+        } else {
+            shuffleExtras();
+        }
         renderAll();
     }
 
@@ -1043,7 +1058,7 @@
                 ch.assigned = null;
             }
         }
-        randomAssign(true, previouslyAssigned)
+        randomAssign(true, previouslyAssigned, true);
     }
 
     // --- Export / Import implementation ---
