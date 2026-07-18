@@ -231,6 +231,13 @@ main {
   color: #ffb3cf;
 }
 
+/* Non-binary */
+.gender-btn.gender-nb {
+  background: rgba(56, 198, 184, 0.15);
+  border: 1px solid rgba(56, 198, 184, 0.35);
+  color: #82f0a1;
+}
+
 /* Hover polish */
 .gender-btn.gender-m:hover {
   background: rgba(80, 140, 255, 0.25);
@@ -238,6 +245,10 @@ main {
 
 .gender-btn.gender-f:hover {
   background: rgba(255, 120, 160, 0.25);
+}
+
+.gender-btn.gender-nb:hover {
+  background: rgba(56, 198, 184, 0.25);
 }
 
 .small-btn {

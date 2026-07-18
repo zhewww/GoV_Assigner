@@ -122,10 +122,37 @@
         return id;
     }
 
+    function normalizeGender(gender) {
+        const normalized = String(gender || '').trim().toUpperCase();
+        if (normalized === 'F') return 'F';
+        if (normalized === 'NB') return 'NB';
+        return 'M';
+    }
+
+    function getNextGender(gender) {
+        const order = ['M', 'F', 'NB'];
+        const index = order.indexOf(normalizeGender(gender));
+        return order[(index + 1) % order.length];
+    }
+
+    function getGenderClassName(gender) {
+        const normalized = normalizeGender(gender);
+        if (normalized === 'F') return 'gender-f';
+        if (normalized === 'NB') return 'gender-nb';
+        return 'gender-m';
+    }
+
     function applyGenderClass(btn, gender) {
-        btn.classList.remove('gender-m', 'gender-f');
-        if (gender === 'M') btn.classList.add('gender-m');
-        if (gender === 'F') btn.classList.add('gender-f');
+        btn.classList.remove('gender-m', 'gender-f', 'gender-nb');
+        const className = getGenderClassName(gender);
+        if (className) btn.classList.add(className);
+    }
+
+    function genderMatches(performerGender, characterGender) {
+        const performer = normalizeGender(performerGender);
+        const character = normalizeGender(characterGender);
+        if (performer === 'NB' || character === 'NB') return true;
+        return performer === character;
     }
 
     function isToday(date) {
@@ -164,11 +191,14 @@
     function renderPerformerList() {
         const container = $('#performer-list');
         container.innerHTML = '';
+        const genderOrder = { M: 0, F: 1, NB: 2 };
         const list = Object.values(performers)
             .filter(p => !extras.has(p.id) && !isAssigned(p.id))
             .sort((a, b) => {
-                if (a.gender !== b.gender) {
-                    return a.gender === 'F' ? -1 : 1;
+                const aRank = genderOrder[normalizeGender(a.gender)] ?? 99;
+                const bRank = genderOrder[normalizeGender(b.gender)] ?? 99;
+                if (aRank !== bRank) {
+                    return aRank - bRank;
                 }
                 return a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
             });
@@ -184,7 +214,7 @@
 
             item.innerHTML = `
         <div class="item-left">
-            <button class="gender-btn ${p.gender === 'M' ? 'gender-m' : 'gender-f'}" data-action="toggle-gender">${p.gender}</button>
+            <button class="gender-btn ${getGenderClassName(p.gender)}" data-action="toggle-gender">${normalizeGender(p.gender)}</button>
             <div class="item-name">${escapeHtml(p.name)}</div>
             <span class="score" data-action="change-score">${assignmentStats[p.name]?.score || 0}</span>
         </div>
@@ -200,9 +230,9 @@
             });
             // buttons
             item.querySelector('[data-action="toggle-gender"]').addEventListener('click', (e) => {
-                p.gender = p.gender === 'M' ? 'F' : 'M';
+                p.gender = getNextGender(p.gender);
                 const btn = e.target;
-                btn.textContent = p.gender;
+                btn.textContent = normalizeGender(p.gender);
                 applyGenderClass(btn, p.gender);
                 renderAll()
             });
@@ -248,7 +278,7 @@
             item.innerHTML = `
         <div class="item-left">
             <div style="text-align:center;background-color:var(--muted);color:var(--bg);width:26px;border-radius:50%;padding:2px">${orderNum}</div>
-            <button class="gender-btn ${p.gender === 'M' ? 'gender-m' : 'gender-f'}" data-action="toggle-gender">${p.gender}</button>
+            <button class="gender-btn ${getGenderClassName(p.gender)}" data-action="toggle-gender">${normalizeGender(p.gender)}</button>
             <div class="item-name">${escapeHtml(p.name)}</div>
             <div class="score-container">
                 <button class="score-adjust-btn" data-action="decrease-score">−</button>
@@ -266,9 +296,9 @@
                 ev.dataTransfer.setData('text/plain', id);
             });
             item.querySelector('[data-action="toggle-gender"]').addEventListener('click', (e) => {
-                p.gender = p.gender === 'M' ? 'F' : 'M';
+                p.gender = getNextGender(p.gender);
                 const btn = e.target;
-                btn.textContent = p.gender;
+                btn.textContent = normalizeGender(p.gender);
                 applyGenderClass(btn, p.gender);
                 renderAll()
             });
@@ -277,6 +307,7 @@
                 renderAll();
             });
             item.querySelector('[data-action="to-performer-list"]').addEventListener('click', () => {
+                clearExtraMark(id);
                 extras.delete(id);
                 renderAll();
             });
@@ -361,7 +392,7 @@
                     <div class="character-main">
                         <div class="character-top-row">
                             <div style="display:flex;align-items:center;gap:8px">
-                                <button class="gender-btn ${ch.gender === 'M' ? 'gender-m' : 'gender-f'}" data-action="toggle-g">${ch.gender}</button>
+                                <button class="gender-btn ${getGenderClassName(ch.gender)}" data-action="toggle-g">${normalizeGender(ch.gender)}</button>
                                 <strong>${escapeHtml(ch.name)}</strong>
                             </div>
                             <div>
@@ -378,9 +409,9 @@
             `;
             // attach event listeners for delete/toggle/unassign
             card.querySelector('[data-action="toggle-g"]').addEventListener('click', (e) => {
-                ch.gender = ch.gender === 'M' ? 'F' : 'M';
+                ch.gender = getNextGender(ch.gender);
                 const btn = e.target;
-                btn.textContent = ch.gender;
+                btn.textContent = normalizeGender(ch.gender);
                 applyGenderClass(btn, ch.gender);
                 renderAll()
             });
@@ -416,7 +447,7 @@
             card.querySelector('[data-action="random-char"]').addEventListener('click', () => {
                 if (ch.locked) return;
                 // Find all extras matching this character's gender
-                const candidates = Array.from(extras).filter(pid => performers[pid] && performers[pid].gender === ch.gender && !performers[pid].locked);
+                const candidates = Array.from(extras).filter(pid => performers[pid] && genderMatches(performers[pid].gender, ch.gender) && !performers[pid].locked);
                 if (candidates.length === 0) {
                     console.log(`No available performers in Extras for gender ${ch.gender}.`);
                     return;
@@ -455,6 +486,12 @@
     }
 
     // --- Utilities ---
+    function clearExtraMark(performerId) {
+        if (performers[performerId]) {
+            performers[performerId].extraMarked = false;
+        }
+    }
+
     function isAssigned(performerId) {
         for (const p of projects) {
             for (const ch of p.characters) if (ch.assigned === performerId) return true;
@@ -502,6 +539,7 @@
                 moveToExtras(id);
             } else if (targetType === 'performerList') {
                 // remove from extras or a character and show in performer list
+                clearExtraMark(id);
                 extras.delete(id);
                 const ch = findCharacterByAssignedPerformer(id);
                 if (ch) ch.assigned = null;
@@ -529,6 +567,7 @@
             extras.add(ch.assigned);
         }
         ch.assigned = performerId;
+        clearExtraMark(performerId);
         // mark as assigned this session
         performers[performerId].everAssignedThisSession = true;
         // update stats
@@ -955,12 +994,12 @@
             let candidates = []
             if (prioritizeUnassigned) {
                 candidates = Array.from(extras).filter(pid =>
-                    performers[pid] && performers[pid].gender === ch.gender && !previouslyAssigned.has(pid) && !performers[pid].locked
+                    performers[pid] && genderMatches(performers[pid].gender, ch.gender) && !previouslyAssigned.has(pid) && !performers[pid].locked
                 );
             }
             if (candidates.length === 0) {
                 candidates = Array.from(extras).filter(pid =>
-                    performers[pid] && performers[pid].gender === ch.gender && !performers[pid].locked
+                    performers[pid] && genderMatches(performers[pid].gender, ch.gender) && !performers[pid].locked
                 );
             }
             if (candidates.length === 0) {
@@ -978,6 +1017,7 @@
             // assign
             ch.assigned = pick;
             extras.delete(pick);
+            clearExtraMark(pick);
             performers[pick].everAssignedThisSession = true;
             // update stats
             updateAssignment(performers[pick].name);
@@ -1071,7 +1111,7 @@
             // validate fields
             const name = String(p.name || '').trim();
             if (!name) continue;
-            const gender = (p.gender === 'F') ? 'F' : 'M';
+            const gender = normalizeGender(p.gender);
             const id = newPerformer(name, gender);
             performers[id].locked = false;
             performers[id].extraMarked = Boolean(p.extraMarked);
@@ -1083,7 +1123,7 @@
                 for (const ch of pr.characters) {
                     const name = String(ch.name || '').trim();
                     if (!name) continue;
-                    const gender = (ch.gender === 'F') ? 'F' : 'M';
+                    const gender = normalizeGender(ch.gender);
                     newCharacter(projId, name, gender);
                     const char = projects.find(p => p.id === projId).characters[projects.find(p => p.id === projId).characters.length - 1];
                     char.locked = false;
