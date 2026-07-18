@@ -99,7 +99,7 @@
     }
     function newPerformer(name, gender = 'M') {
         const id = 'p' + (performerIdCounter++);
-        performers[id] = { id, name, gender, everAssignedThisSession: false, locked: false };
+        performers[id] = { id, name, gender, everAssignedThisSession: false, locked: false, extraMarked: false };
         return id;
     }
     function newProject(name) {
@@ -231,11 +231,7 @@
     function renderExtras() {
         const container = $('#extras-dropzone');
         container.innerHTML = '';
-        const arr = Array.from(extras).sort((a, b) => {
-            const scoreA = assignmentStats[performers[a].name]?.score || 0;
-            const scoreB = assignmentStats[performers[b].name]?.score || 0;
-            return scoreA - scoreB;
-        });
+        const arr = Array.from(extras);
         if (!arr.length) {
             container.innerHTML = `<div class="empty">No performers in Extras.</div>`;
             return;
@@ -261,6 +257,7 @@
             </div>
         </div>
         <div>
+            <button class="extra-radio-toggle${p.extraMarked ? ' active' : ''}" data-action="toggle-extra-mark" aria-pressed="${p.extraMarked ? 'true' : 'false'}" title="${p.extraMarked ? 'Unmark extra' : 'Mark extra'}">${p.extraMarked ? '●' : '○'}</button>
             <button class="small-btn lock-btn${p.locked ? ' lock-btn-active' : ''}" data-action="toggle-lock-extra">${p.locked ? '🔒' : '🔓'}</button>
             <button class="small-btn" data-action="to-performer-list">⇇</button>
         </div>
@@ -274,6 +271,10 @@
                 btn.textContent = p.gender;
                 applyGenderClass(btn, p.gender);
                 renderAll()
+            });
+            item.querySelector('[data-action="toggle-extra-mark"]').addEventListener('click', () => {
+                p.extraMarked = !p.extraMarked;
+                renderAll();
             });
             item.querySelector('[data-action="to-performer-list"]').addEventListener('click', () => {
                 extras.delete(id);
@@ -1024,7 +1025,7 @@
         const outPerformers = [];
         for (const id in performers) {
             const p = performers[id];
-            outPerformers.push({ name: p.name, gender: p.gender });
+            outPerformers.push({ name: p.name, gender: p.gender, extraMarked: Boolean(p.extraMarked) });
         }
 
         const outProjects = projects.map(proj => ({
@@ -1073,6 +1074,7 @@
             const gender = (p.gender === 'F') ? 'F' : 'M';
             const id = newPerformer(name, gender);
             performers[id].locked = false;
+            performers[id].extraMarked = Boolean(p.extraMarked);
         }
         // load projects and characters
         for (const pr of data.projects) {
