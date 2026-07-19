@@ -15,6 +15,9 @@
     let extras = new Set(); // performer ids currently in extras pool
 
     let currentProjectId = null;
+    let characterImageVersion = 0;
+    let imagesDirectoryHandle = null;
+    const characterImagePreviewMap = new Map();
 
     // Assignment stats: name -> {score, lastAssigned}
     let assignmentStats = {};
@@ -367,6 +370,103 @@
         extras = new Set(arr);
     }
 
+    function buildCharacterImagePath(projectName, characterName) {
+        const versionSuffix = characterImageVersion ? `?v=${characterImageVersion}` : '';
+        return `assigner_images/${encodeURIComponent(projectName || 'Project')}/${encodeURIComponent(characterName || 'Character')}.png${versionSuffix}`;
+    }
+
+    function getCharacterImageSrc(projectName, characterName) {
+        const key = `${projectName}::${characterName}`;
+        const preview = characterImagePreviewMap.get(key);
+        return preview?.url || buildCharacterImagePath(projectName, characterName);
+    }
+
+    async function ensureImagesDirectoryHandle() {
+        let grantedNow = false;
+        if (!imagesDirectoryHandle) {
+            window.alert('To upload files, you must first grant write permissions. Click OK and select the assigner_images folder that came with your download.' +
+                "\n\nIf you select the wrong folder, bad stuff WILL happen. Please make sure the folder you select is named assigner_images.");
+            const pickerOptions = {};
+            if (imagesDirectoryHandle) {
+                pickerOptions.startIn = imagesDirectoryHandle;
+            }
+            imagesDirectoryHandle = await window.showDirectoryPicker(pickerOptions);
+            grantedNow = true;
+        }
+
+        const permission = await imagesDirectoryHandle.queryPermission({ mode: 'readwrite' });
+        if (permission === 'granted') {
+            return { directoryHandle: imagesDirectoryHandle, grantedNow };
+        }
+        if (permission === 'prompt') {
+            const requested = await imagesDirectoryHandle.requestPermission({ mode: 'readwrite' });
+            if (requested === 'granted') {
+                return { directoryHandle: imagesDirectoryHandle, grantedNow: true };
+            }
+        }
+
+        // User denied/canceled permission prompt; clear handle so next attempt
+        // starts from directory selection instead of resuming permission prompt.
+        imagesDirectoryHandle = null;
+        return null;
+    }
+
+    async function uploadCharacterImage(projectName, characterName) {
+        if (typeof window.showDirectoryPicker !== 'function' || typeof window.showOpenFilePicker !== 'function') {
+            window.alert('This browser does not support the required file picker APIs.');
+            return;
+        }
+
+        try {
+            const permissionResult = await ensureImagesDirectoryHandle();
+            if (!permissionResult) return;
+
+            const { directoryHandle, grantedNow } = permissionResult;
+            if (grantedNow) {
+                window.alert('Permission has successfully been granted. You can now upload images.');
+                return;
+            }
+
+            const projectDir = await directoryHandle.getDirectoryHandle(projectName, { create: true });
+            const targetFileName = `${characterName}.png`;
+
+            try {
+                await projectDir.removeEntry(targetFileName);
+            } catch (error) {
+                if (error?.name !== 'NotFoundError') throw error;
+            }
+
+            const [fileHandle] = await window.showOpenFilePicker({
+                types: [{
+                    description: 'Image files',
+                    accept: {
+                        'image/*': ['.png', '.jpg', '.jpeg', '.webp', '.gif']
+                    }
+                }],
+                multiple: false
+            });
+
+            const selectedFile = await fileHandle.getFile();
+            const destinationHandle = await projectDir.getFileHandle(targetFileName, { create: true });
+            const writable = await destinationHandle.createWritable();
+            await writable.write(await selectedFile.arrayBuffer());
+            await writable.close();
+
+            const key = `${projectName}::${characterName}`;
+            const previousPreview = characterImagePreviewMap.get(key);
+            if (previousPreview?.url) URL.revokeObjectURL(previousPreview.url);
+            characterImagePreviewMap.set(key, { url: URL.createObjectURL(selectedFile) });
+            characterImageVersion += 1;
+            renderCharacterList();
+        } catch (error) {
+            if (error?.name === 'AbortError') {
+                return;
+            }
+            console.error('Unable to upload character image:', error);
+            window.alert('Unable to upload character image. Please try again.');
+        }
+    }
+
     function renderCharacterList() {
         const container = $('#character-list');
         container.innerHTML = '';
@@ -391,14 +491,14 @@
                         const card = document.createElement('div');
                         card.className = 'character-card';
                         card.dataset.charId = ch.id;
-                        // build image path relative to index.html: images/<Project Name>/<Character Name>.png
+                        // build image path relative to index.html: assigner_images/<Project Name>/<Character Name>.png
                         const proj = projects.find(p => p.id === currentProjectId) || { name: '' };
-                        const imgPath = `images/${encodeURIComponent(proj.name)}/${encodeURIComponent(ch.name)}.png`;
+                        const imgPath = getCharacterImageSrc(proj.name, ch.name);
                         card.innerHTML = `
                 <div class="character-row">
-                    <div class="character-image">
+                    <div class="character-image" data-project="${escapeHtml(proj.name)}" data-character="${escapeHtml(ch.name)}">
                         <img src="${imgPath}" alt="${escapeHtml(ch.name)}" style="display:none;" onload="this.style.display='block'" onerror="this.style.display='none'; this.parentNode.querySelector('.no-image').style.display='flex'" />
-                        <div class="no-image small-muted" style="display:none;" data-img-path="${imgPath}" data-project="${escapeHtml(proj.name)}" data-character="${escapeHtml(ch.name)}">No Image Found</div>
+                        <div class="no-image small-muted" style="display:none;" data-img-path="${imgPath}">Click to upload image</div>
                     </div>
                     <div class="character-main">
                         <div class="character-top-row">
@@ -434,24 +534,10 @@
                 renderAll();
             });
             
-            // handle no-image click to show modal with expected path
-            const noImageEl = card.querySelector('.no-image');
-            if (noImageEl) {
-                noImageEl.addEventListener('click', () => {
-                    const project = noImageEl.dataset.project;
-                    const character = noImageEl.dataset.character;
-                    const displayPath = `images/${project}/${character}.png`;
-                    const modal = $('#image-not-found-modal');
-                    $('#modal-backdrop').classList.remove('hidden');
-                    modal.classList.remove('hidden');
-                    $('#image-not-found-message').textContent = `Image not found. Check that you put your image at ${displayPath}`;
-                    const closeBtn = $('#image-not-found-close');
-                    function cleanup() {
-                        modal.classList.add('hidden');
-                        $('#modal-backdrop').classList.add('hidden');
-                        closeBtn.removeEventListener('click', cleanup);
-                    }
-                    closeBtn.addEventListener('click', cleanup);
+            const imageContainer = card.querySelector('.character-image');
+            if (imageContainer) {
+                imageContainer.addEventListener('click', () => {
+                    void uploadCharacterImage(imageContainer.dataset.project, imageContainer.dataset.character);
                 });
             }
             

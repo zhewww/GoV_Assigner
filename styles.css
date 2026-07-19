@@ -327,6 +327,13 @@ main {
   border-radius: 8px;
   overflow: hidden;
   border: 1px solid rgba(255,255,255,0.03);
+  cursor: pointer;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+
+.character-image:hover {
+  border-color: rgba(56, 198, 184, 0.35);
+  transform: translateY(-1px);
 }
 .character-image img {
   width: 100%;
@@ -340,10 +347,12 @@ main {
   display: flex;
   align-items: center;
   justify-content: center;
+  text-align: center;
   color: var(--muted);
   font-size: 12px;
   cursor: pointer;
   transition: background-color 0.15s ease;
+  padding: 6px;
 }
 .no-image:hover {
   background-color: rgba(0, 0, 0, 0.3);
